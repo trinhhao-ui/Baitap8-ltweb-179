@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{layouts/layout}">
+
+<head>
+    <title th:text="${formTitle}">Sản phẩm</title>
+</head>
+
+<body>
+    <section layout:fragment="content">
+
+        <div class="row justify-content-center">
+            <div class="col-md-9 col-lg-7">
+
+                <h2 class="mb-4" th:text="${formTitle}">Sản phẩm</h2>
+
+                <!-- FLASH MESSAGES -->
+                <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${success}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- PRODUCT FORM -->
+                <form method="post" enctype="multipart/form-data" th:object="${product}" th:action="${product.id == null}
+                              ? @{/products/create}
+                              : @{/products/edit/{id}(id=${product.id})}">
+
+                    <input type="hidden" th:field="*{id}">
+
+                    <!-- TÊN SẢN PHẨM -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Tên sản phẩm <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" th:field="*{name}"
+                            th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                            placeholder="Nhập tên sản phẩm">
+                        <div class="invalid-feedback" th:errors="*{name}"></div>
+                    </div>
+
+                    <!-- DANH MỤC -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Danh mục</label>
+                        <select class="form-select" th:field="*{categoryId}">
+                            <option value="">-- Chọn danh mục --</option>
+                            <option th:each="cat : ${categories}"
+                                    th:value="${cat.id}"
+                                    th:text="${cat.name}"
+                                    th:selected="${product.categoryId != null and product.categoryId == cat.id}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- GIÁ -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Giá (VNĐ) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" step="0.01" min="0" class="form-control" th:field="*{price}"
+                            th:classappend="${#fields.hasErrors('price')} ? 'is-invalid'"
+                            placeholder="Nhập giá sản phẩm">
+                        <div class="invalid-feedback" th:errors="*{price}"></div>
+                    </div>
+
+                    <!-- SỐ LƯỢNG -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Số lượng <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" min="0" class="form-control" th:field="*{quantity}"
+                            th:classappend="${#fields.hasErrors('quantity')} ? 'is-invalid'"
+                            placeholder="Nhập số lượng">
+                        <div class="invalid-feedback" th:errors="*{quantity}"></div>
+                    </div>
+
+                    <!-- MÔ TẢ -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mô tả</label>
+                        <textarea class="form-control" rows="4" th:field="*{description}"
+                            th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"
+                            placeholder="Nhập mô tả sản phẩm (tuỳ chọn)"></textarea>
+                        <div class="invalid-feedback" th:errors="*{description}"></div>
+                    </div>
+
+                    <!-- HÌNH ẢNH HIỆN TẠI (chỉ hiện khi edit và đã có ảnh) -->
+                    <div class="mb-4" th:if="${product.images != null and !product.images.isEmpty()}">
+                        <label class="form-label fw-semibold">Hình ảnh hiện tại</label>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <div th:each="image : ${product.images}" class="card shadow-sm" style="width:160px;">
+                                <img th:src="@{'/uploads/products/' + ${image.imageUrl}}" alt="Ảnh sản phẩm"
+                                    class="card-img-top" style="width:160px; height:160px; object-fit:cover;">
+                                <div class="card-body text-center p-2">
+                                    <div th:if="${image.primary}" class="mb-2">
+                                        <span class="badge bg-success">★ Ảnh chính</span>
+                                    </div>
+                                    <button type="button" class="btn btn-danger btn-sm w-100"
+                                        th:attr="data-url=@{/products/image/delete/{id}(id=${image.id})}"
+                                        onclick="deleteImage(this)">
+                                        🗑 Xóa ảnh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- UPLOAD ẢNH MỚI -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            Thêm hình ảnh mới
+                            <span class="text-muted fw-normal"
+                                th:if="${product.images != null and !product.images.isEmpty()}">
+                                (ảnh mới sẽ thêm vào danh sách hiện có)
+                            </span>
+                        </label>
+                        <input type="file" class="form-control" name="imageFiles" multiple accept="image/*">
+                        <div class="form-text">Có thể chọn nhiều ảnh. Định dạng: JPG, PNG, WEBP. Tối đa 5MB/ảnh.</div>
+                    </div>
+
+                    <!-- BUTTONS -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">💾 Lưu</button>
+                        <a th:href="@{/products}" class="btn btn-secondary">← Quay lại</a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- SCRIPT: xóa ảnh đơn qua fetch POST -->
+        <script>
+            function deleteImage(button) {
+                if (!confirm("Bạn có chắc muốn xóa hình ảnh này?")) return;
+                const url = button.getAttribute("data-url");
+                fetch(url, { method: "POST", headers: { "X-Requested-With": "XMLHttpRequest" } })
+                    .then(response => {
+                        if (response.ok || response.redirected) {
+                            window.location.reload();
+                        } else {
+                            alert("Không thể xóa hình ảnh!");
+                        }
+                    })
+                    .catch(() => alert("Có lỗi xảy ra khi xóa hình ảnh!"));
+            }
+        </script>
+
+    </section>
+</body>
+</html>

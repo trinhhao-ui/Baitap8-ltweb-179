@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{layouts/layout}">
+
+<head>
+    <title>Ajax - Quản lý sản phẩm</title>
+</head>
+
+<body>
+    <section layout:fragment="content">
+
+        <!-- ========= TIÊU ĐỀ ========= -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0">Quản lý sản phẩm</h3>
+            <button class="btn btn-primary" onclick="openAddModal()">+ Thêm sản phẩm</button>
+        </div>
+
+        <!-- ALERT -->
+        <div id="pAlert" class="d-none mb-3"></div>
+
+        <!-- ========= FORM TÌM KIẾM ========= -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <input id="pKeyword" type="text" class="form-control" placeholder="Tìm theo tên sản phẩm...">
+            </div>
+            <div class="col-md-2">
+                <select id="pSize" class="form-select">
+                    <option value="5">5 / trang</option>
+                    <option value="10">10 / trang</option>
+                    <option value="20">20 / trang</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-success w-100" onclick="searchProducts(0)">🔍 Tìm kiếm</button>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100" onclick="resetSearch()">✖ Xóa lọc</button>
+            </div>
+        </div>
+
+        <!-- ========= BẢNG ========= -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:55px">ID</th>
+                        <th style="width:90px" class="text-center">Ảnh</th>
+                        <th>Tên sản phẩm</th>
+                        <th style="width:120px">Danh mục</th>
+                        <th style="width:130px" class="text-end">Giá (VNĐ)</th>
+                        <th style="width:80px" class="text-center">SL</th>
+                        <th>Mô tả</th>
+                        <th style="width:130px" class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="pTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">Đang tải...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PHÂN TRANG + THỐNG KÊ -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+            <small class="text-muted" id="pPageInfo"></small>
+            <nav>
+                <ul class="pagination mb-0" id="pPagination"></ul>
+            </nav>
+        </div>
+
+        <!-- =================== MODAL THÊM =================== -->
+        <div class="modal fade" id="addProductModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <form id="addProductForm" enctype="multipart/form-data" onsubmit="return false;">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">➕ Thêm sản phẩm mới</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Tên sản phẩm <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="a_name" name="name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Danh mục</label>
+                                    <select class="form-select" id="a_categoryId" name="categoryId">
+                                        <option value="">-- Chọn danh mục --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Giá (VNĐ) <span
+                                            class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="a_price" name="price" min="0"
+                                        step="1000" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Số lượng <span
+                                            class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="a_quantity" name="quantity" min="0"
+                                        required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Mô tả</label>
+                                    <textarea class="form-control" id="a_description" name="description"
+                                        rows="2"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Hình ảnh</label>
+                                    <input type="file" class="form-control" name="imageFiles" multiple accept="image/*">
+                                    <div class="form-text">Có thể chọn nhiều ảnh</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                            <button type="submit" class="btn btn-primary" id="aBtnSubmit">Thêm</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================== MODAL SỬA =================== -->
+        <div class="modal fade" id="editProductModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <form id="editProductForm" enctype="multipart/form-data" onsubmit="return false;">
+                        <input type="hidden" id="e_id" name="id">
+                        <div class="modal-header bg-warning">
+                            <h5 class="modal-title">✏️ Cập nhật sản phẩm</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Info card -->
+                            <div class="alert alert-light border mb-3 py-2 small">
+                                <span id="e_info"></span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Tên sản phẩm <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="e_name" name="name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Danh mục</label>
+                                    <select class="form-select" id="e_categoryId" name="categoryId">
+                                        <option value="">-- Chọn danh mục --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Giá (VNĐ) <span
+                                            class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="e_price" name="price" min="0"
+                                        step="1000" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Số lượng <span
+                                            class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="e_quantity" name="quantity" min="0"
+                                        required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Mô tả</label>
+                                    <textarea class="form-control" id="e_description" name="description"
+                                        rows="2"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Thêm ảnh mới</label>
+                                    <input type="file" class="form-control" name="imageFiles" multiple accept="image/*">
+                                    <div class="form-text">Ảnh cũ vẫn được giữ</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                            <button type="submit" class="btn btn-warning" id="eBtnSubmit">Cập nhật</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================== JAVASCRIPT =================== -->
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            'use strict';
+
+            // ---- state ----
+            var pState = { keyword: '', page: 0, size: 5 };
+
+            // ---- utils ----
+            function esc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+            function fmt(v) { return Number(v).toLocaleString('vi-VN') + ' ₫'; }
+            function showAlert(msg, type) {
+                var b = $('#pAlert');
+                b.removeClass().addClass('alert alert-' + type + ' alert-dismissible fade show')
+                    .html(msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>');
+                setTimeout(function () { b.alert('close'); }, 5000);
+            }
+            function getPrimary(imgs) { if (!imgs || !imgs.length) return null; return imgs.find(function (i) { return i.primary; }) || imgs[0]; }
+
+            // ---- load categories vào select ----
+            function loadCatOptions(selId, selectedId) {
+                $.getJSON(contextPath + '/api/category', function (res) {
+                    if (!res.success) return;
+                    var sel = $('#' + selId);
+                    sel.find('option:not(:first)').remove();
+                    $.each(res.data, function (i, c) {
+                        var o = $('<option>').val(c.id).text(c.name);
+                        if (selectedId && String(c.id) === String(selectedId)) o.prop('selected', true);
+                        sel.append(o);
+                    });
+                });
+            }
+
+            // ---- tìm kiếm + render bảng ----
+            function searchProducts(page) {
+                pState.keyword = $('#pKeyword').val().trim();
+                pState.size = parseInt($('#pSize').val());
+                pState.page = page;
+
+                $.getJSON(contextPath + '/api/product/search', { keyword: pState.keyword, page: pState.page, size: pState.size },
+                    function (res) {
+                        if (!res.success) { showAlert('Lỗi tải dữ liệu', 'danger'); return; }
+                        var d = res.data, rows = '';
+
+                        if (!d.content || !d.content.length) {
+                            rows = '<tr><td colspan="8" class="text-center text-muted py-4">Không tìm thấy sản phẩm nào.</td></tr>';
+                        } else {
+                            $.each(d.content, function (i, p) {
+                                var pri = getPrimary(p.images);
+                                var imgTag = pri
+                                    ? '<img src="' + contextPath + '/uploads/products/' + esc(pri.imageUrl) + '" style="width:70px;height:70px;object-fit:cover;border-radius:6px;">'
+                                    : '<span class="text-muted small">Chưa có</span>';
+                                var cat = p.categoryName
+                                    ? '<span class="badge bg-info text-dark">' + esc(p.categoryName) + '</span>'
+                                    : '<span class="text-muted">—</span>';
+                                rows += '<tr id="pr-' + p.id + '">'
+                                    + '<td>' + p.id + '</td>'
+                                    + '<td class="text-center">' + imgTag + '</td>'
+                                    + '<td class="fw-semibold">' + esc(p.name) + '</td>'
+                                    + '<td>' + cat + '</td>'
+                                    + '<td class="text-end">' + fmt(p.price) + '</td>'
+                                    + '<td class="text-center">' + p.quantity + '</td>'
+                                    + '<td class="text-muted small">' + esc(p.description) + '</td>'
+                                    + '<td class="text-center">'
+                                    + '<button class="btn btn-warning btn-sm me-1" onclick="openEditModal(' + p.id + ')">✏️</button>'
+                                    + '<button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p.id + ')">🗑</button>'
+                                    + '</td></tr>';
+                            });
+                        }
+                        $('#pTableBody').html(rows);
+                        renderPagination(d);
+                        $('#pPageInfo').text('Trang ' + (d.currentPage + 1) + ' / ' + d.totalPages + ' | Tổng: ' + d.totalElements + ' sản phẩm');
+                    }).fail(function () { showAlert('Không thể kết nối API', 'danger'); });
+            }
+
+            // ---- phân trang ----
+            function renderPagination(d) {
+                if (d.totalPages <= 1) { $('#pPagination').html(''); return; }
+                var html = '';
+                html += '<li class="page-item' + (d.first ? ' disabled' : '') + '"><a class="page-link" onclick="searchProducts(0)">&laquo;&laquo;</a></li>';
+                html += '<li class="page-item' + (d.first ? ' disabled' : '') + '"><a class="page-link" onclick="searchProducts(' + (d.currentPage - 1) + ')">&laquo;</a></li>';
+                for (var i = d.startPage; i <= d.endPage; i++) {
+                    html += '<li class="page-item' + (i === d.currentPage ? ' active' : '') + '"><a class="page-link" onclick="searchProducts(' + i + ')">' + (i + 1) + '</a></li>';
+                }
+                html += '<li class="page-item' + (d.last ? ' disabled' : '') + '"><a class="page-link" onclick="searchProducts(' + (d.currentPage + 1) + ')">&raquo;</a></li>';
+                html += '<li class="page-item' + (d.last ? ' disabled' : '') + '"><a class="page-link" onclick="searchProducts(' + (d.totalPages - 1) + ')">&raquo;&raquo;</a></li>';
+                $('#pPagination').html(html);
+            }
+
+            // ---- reset ----
+            function resetSearch() {
+                $('#pKeyword').val('');
+                $('#pSize').val('5');
+                searchProducts(0);
+            }
+
+            // ---- THÊM ----
+            function openAddModal() {
+                $('#addProductForm')[0].reset();
+                loadCatOptions('a_categoryId', null);
+                new bootstrap.Modal(document.getElementById('addProductModal')).show();
+            }
+            $('#addProductForm').submit(function (e) {
+                e.preventDefault();
+                var btn = $('#aBtnSubmit').prop('disabled', true).text('Đang thêm...');
+                $.ajax({
+                    url: contextPath + '/api/product/addProduct',
+                    type: 'POST', data: new FormData(this),
+                    cache: false, contentType: false, processData: false, dataType: 'json',
+                    success: function (res) {
+                        if (res.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
+                            showAlert('✔ ' + res.message, 'success');
+                            searchProducts(pState.page);
+                        } else { showAlert('✘ ' + res.message, 'danger'); }
+                    },
+                    error: function (xhr) { showAlert('✘ ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Lỗi'), 'danger'); },
+                    complete: function () { btn.prop('disabled', false).text('Thêm'); }
+                });
+            });
+
+            // ---- SỬA ----
+            function openEditModal(id) {
+                $.getJSON(contextPath + '/api/product/' + id, function (res) {
+                    if (!res.success) { showAlert('✘ ' + res.message, 'danger'); return; }
+                    var p = res.data;
+                    $('#e_info').html('<b>ID:</b> ' + p.id + ' &nbsp;|&nbsp; <b>Tên:</b> ' + esc(p.name) + ' &nbsp;|&nbsp; <b>Ảnh:</b> ' + (p.images ? p.images.length : 0));
+                    $('#e_id').val(p.id);
+                    $('#e_name').val(p.name);
+                    $('#e_price').val(p.price);
+                    $('#e_quantity').val(p.quantity);
+                    $('#e_description').val(p.description || '');
+                    loadCatOptions('e_categoryId', p.categoryId);
+                    new bootstrap.Modal(document.getElementById('editProductModal')).show();
+                }).fail(function () { showAlert('✘ Không thể tải thông tin', 'danger'); });
+            }
+            $('#editProductForm').submit(function (e) {
+                e.preventDefault();
+                var btn = $('#eBtnSubmit').prop('disabled', true).text('Đang lưu...');
+                $.ajax({
+                    url: contextPath + '/api/product/updateProduct',
+                    type: 'PUT', data: new FormData(this),
+                    cache: false, contentType: false, processData: false, dataType: 'json',
+                    success: function (res) {
+                        if (res.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('editProductModal')).hide();
+                            showAlert('✔ ' + res.message, 'success');
+                            searchProducts(pState.page);
+                        } else { showAlert('✘ ' + res.message, 'danger'); }
+                    },
+                    error: function (xhr) { showAlert('✘ ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Lỗi'), 'danger'); },
+                    complete: function () { btn.prop('disabled', false).text('Cập nhật'); }
+                });
+            });
+
+            // ---- XÓA ----
+            function deleteProduct(id) {
+                if (!confirm('Bạn có chắc muốn xóa sản phẩm ID=' + id + '?')) return;
+                $.ajax({
+                    type: 'DELETE',
+                    url: contextPath + '/api/product/deleteProduct?id=' + id,
+                    dataType: 'json',
+                    success: function (res) {
+                        if (res.success) {
+                            $('#pr-' + id).fadeOut(400, function () { $(this).remove(); });
+                            showAlert('✔ ' + res.message, 'success');
+                            // Reload lại trang nếu xóa hết row trên trang hiện tại
+                            setTimeout(function () { searchProducts(pState.page); }, 500);
+                        } else { showAlert('✘ ' + res.message, 'danger'); }
+                    },
+                    error: function () { showAlert('✘ Không thể xóa', 'danger'); }
+                });
+            }
+
+            // ---- Enter để tìm kiếm ----
+            $('#pKeyword').on('keypress', function (e) { if (e.which === 13) searchProducts(0); });
+
+            // ---- Khởi động ----
+            $(document).ready(function () { searchProducts(0); });
+            /*]]>*/
+        </script>
+
+    </section>
+</body>
+
+</html>

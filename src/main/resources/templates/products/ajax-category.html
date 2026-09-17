@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{layouts/layout}">
+
+<head>
+    <title>Ajax - Quản lý danh mục</title>
+</head>
+
+<body>
+    <section layout:fragment="content">
+
+        <!-- ========= TIÊU ĐỀ ========= -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0">Quản lý danh mục</h3>
+            <button class="btn btn-primary" onclick="openAddCatModal()">+ Thêm danh mục</button>
+        </div>
+
+        <!-- ALERT -->
+        <div id="cAlert" class="d-none mb-3"></div>
+
+        <!-- ========= FORM TÌM KIẾM ========= -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <input id="cKeyword" type="text" class="form-control" placeholder="Tìm theo tên danh mục...">
+            </div>
+            <div class="col-md-2">
+                <select id="cSize" class="form-select">
+                    <option value="5">5 / trang</option>
+                    <option value="10">10 / trang</option>
+                    <option value="20">20 / trang</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-success w-100" onclick="searchCategories(0)">🔍 Tìm kiếm</button>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100" onclick="resetCatSearch()">✖ Xóa lọc</button>
+            </div>
+        </div>
+
+        <!-- ========= BẢNG ========= -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:55px">ID</th>
+                        <th style="width:80px" class="text-center">Icon</th>
+                        <th>Tên danh mục</th>
+                        <th>Mô tả</th>
+                        <th style="width:130px" class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="cTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">Đang tải...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PHÂN TRANG + THỐNG KÊ -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+            <small class="text-muted" id="cPageInfo"></small>
+            <nav>
+                <ul class="pagination mb-0" id="cPagination"></ul>
+            </nav>
+        </div>
+
+        <!-- =================== MODAL THÊM =================== -->
+        <div class="modal fade" id="addCatModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="addCatForm" enctype="multipart/form-data" onsubmit="return false;">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">➕ Thêm danh mục mới</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Tên danh mục <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="ca_name" name="categoryName" required
+                                    placeholder="Nhập tên danh mục">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Mô tả</label>
+                                <textarea class="form-control" id="ca_description" name="description" rows="2"
+                                    placeholder="Nhập mô tả (tuỳ chọn)"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Icon</label>
+                                <input type="file" class="form-control" name="icon" accept="image/*">
+                                <div class="form-text">Ảnh icon đại diện cho danh mục</div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                            <button type="submit" class="btn btn-primary" id="caBtnSubmit">Thêm</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================== MODAL SỬA =================== -->
+        <div class="modal fade" id="editCatModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="editCatForm" enctype="multipart/form-data" onsubmit="return false;">
+                        <input type="hidden" id="ce_id" name="categoryId">
+                        <div class="modal-header bg-warning">
+                            <h5 class="modal-title">✏️ Cập nhật danh mục</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Info card -->
+                            <div class="alert alert-light border mb-3 py-2 small">
+                                <span id="ce_info"></span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Tên danh mục <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="ce_name" name="categoryName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Mô tả</label>
+                                <textarea class="form-control" id="ce_description" name="description"
+                                    rows="2"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Icon mới</label>
+                                <input type="file" class="form-control" name="icon" accept="image/*">
+                                <div id="ce_currentIcon" class="mt-2"></div>
+                                <div class="form-text">Để trống nếu không đổi icon</div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                            <button type="submit" class="btn btn-warning" id="ceBtnSubmit">Cập nhật</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================== JAVASCRIPT =================== -->
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            'use strict';
+
+            // ---- state ----
+            var cState = { keyword: '', page: 0, size: 5 };
+
+            // ---- utils ----
+            function cEsc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+            function showCAlert(msg, type) {
+                var b = $('#cAlert');
+                b.removeClass().addClass('alert alert-' + type + ' alert-dismissible fade show')
+                    .html(msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>');
+                setTimeout(function () { b.alert('close'); }, 5000);
+            }
+
+            // ---- tìm kiếm + render bảng ----
+            function searchCategories(page) {
+                cState.keyword = $('#cKeyword').val().trim();
+                cState.size = parseInt($('#cSize').val());
+                cState.page = page;
+
+                $.getJSON(contextPath + '/api/category/search',
+                    { keyword: cState.keyword, page: cState.page, size: cState.size },
+                    function (res) {
+                        if (!res.success) { showCAlert('Lỗi tải dữ liệu', 'danger'); return; }
+                        var d = res.data, rows = '';
+
+                        if (!d.content || !d.content.length) {
+                            rows = '<tr><td colspan="5" class="text-center text-muted py-4">Không tìm thấy danh mục nào.</td></tr>';
+                        } else {
+                            $.each(d.content, function (i, c) {
+                                var iconTag = c.icon
+                                    ? '<img src="' + contextPath + '/uploads/categories/' + cEsc(c.icon) + '" style="width:50px;height:50px;object-fit:cover;border-radius:6px;" alt="">'
+                                    : '<span class="text-muted small">—</span>';
+                                rows += '<tr id="cr-' + c.id + '">'
+                                    + '<td>' + c.id + '</td>'
+                                    + '<td class="text-center">' + iconTag + '</td>'
+                                    + '<td class="fw-semibold">' + cEsc(c.name) + '</td>'
+                                    + '<td class="text-muted small">' + cEsc(c.description) + '</td>'
+                                    + '<td class="text-center">'
+                                    + '<button class="btn btn-warning btn-sm me-1" onclick="openEditCatModal(' + c.id + ')">✏️</button>'
+                                    + '<button class="btn btn-danger btn-sm" onclick="deleteCategory(' + c.id + ')">🗑</button>'
+                                    + '</td></tr>';
+                            });
+                        }
+                        $('#cTableBody').html(rows);
+                        renderCatPagination(d);
+                        $('#cPageInfo').text('Trang ' + (d.currentPage + 1) + ' / ' + d.totalPages + ' | Tổng: ' + d.totalElements + ' danh mục');
+                    }).fail(function () { showCAlert('Không thể kết nối API', 'danger'); });
+            }
+
+            // ---- phân trang ----
+            function renderCatPagination(d) {
+                if (d.totalPages <= 1) { $('#cPagination').html(''); return; }
+                var html = '';
+                html += '<li class="page-item' + (d.first ? ' disabled' : '') + '"><a class="page-link" onclick="searchCategories(0)">&laquo;&laquo;</a></li>';
+                html += '<li class="page-item' + (d.first ? ' disabled' : '') + '"><a class="page-link" onclick="searchCategories(' + (d.currentPage - 1) + ')">&laquo;</a></li>';
+                for (var i = d.startPage; i <= d.endPage; i++) {
+                    html += '<li class="page-item' + (i === d.currentPage ? ' active' : '') + '"><a class="page-link" onclick="searchCategories(' + i + ')">' + (i + 1) + '</a></li>';
+                }
+                html += '<li class="page-item' + (d.last ? ' disabled' : '') + '"><a class="page-link" onclick="searchCategories(' + (d.currentPage + 1) + ')">&raquo;</a></li>';
+                html += '<li class="page-item' + (d.last ? ' disabled' : '') + '"><a class="page-link" onclick="searchCategories(' + (d.totalPages - 1) + ')">&raquo;&raquo;</a></li>';
+                $('#cPagination').html(html);
+            }
+
+            // ---- reset ----
+            function resetCatSearch() {
+                $('#cKeyword').val('');
+                $('#cSize').val('5');
+                searchCategories(0);
+            }
+
+            // ---- THÊM ----
+            function openAddCatModal() {
+                $('#addCatForm')[0].reset();
+                new bootstrap.Modal(document.getElementById('addCatModal')).show();
+            }
+            $('#addCatForm').submit(function (e) {
+                e.preventDefault();
+                var btn = $('#caBtnSubmit').prop('disabled', true).text('Đang thêm...');
+                $.ajax({
+                    url: contextPath + '/api/category/addCategory',
+                    type: 'POST', data: new FormData(this),
+                    cache: false, contentType: false, processData: false, dataType: 'json',
+                    success: function (res) {
+                        if (res.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('addCatModal')).hide();
+                            showCAlert('✔ ' + res.message, 'success');
+                            searchCategories(cState.page);
+                        } else { showCAlert('✘ ' + res.message, 'danger'); }
+                    },
+                    error: function (xhr) { showCAlert('✘ ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Lỗi'), 'danger'); },
+                    complete: function () { btn.prop('disabled', false).text('Thêm'); }
+                });
+            });
+
+            // ---- SỬA ----
+            function openEditCatModal(id) {
+                $.getJSON(contextPath + '/api/category/' + id, function (res) {
+                    if (!res.success) { showCAlert('✘ ' + res.message, 'danger'); return; }
+                    var c = res.data;
+                    $('#ce_info').html('<b>ID:</b> ' + c.id + ' &nbsp;|&nbsp; <b>Tên:</b> ' + cEsc(c.name));
+                    $('#ce_id').val(c.id);
+                    $('#ce_name').val(c.name);
+                    $('#ce_description').val(c.description || '');
+                    // Hiển thị icon hiện tại
+                    if (c.icon) {
+                        $('#ce_currentIcon').html('<img src="' + contextPath + '/uploads/categories/' + cEsc(c.icon) + '" style="height:50px;border-radius:4px;" alt="icon hiện tại"> <small class="text-muted">Icon hiện tại</small>');
+                    } else {
+                        $('#ce_currentIcon').html('<small class="text-muted">Chưa có icon</small>');
+                    }
+                    new bootstrap.Modal(document.getElementById('editCatModal')).show();
+                }).fail(function () { showCAlert('✘ Không thể tải thông tin', 'danger'); });
+            }
+            $('#editCatForm').submit(function (e) {
+                e.preventDefault();
+                var btn = $('#ceBtnSubmit').prop('disabled', true).text('Đang lưu...');
+                $.ajax({
+                    url: contextPath + '/api/category/updateCategory',
+                    type: 'PUT', data: new FormData(this),
+                    cache: false, contentType: false, processData: false, dataType: 'json',
+                    success: function (res) {
+                        if (res.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('editCatModal')).hide();
+                            showCAlert('✔ ' + res.message, 'success');
+                            searchCategories(cState.page);
+                        } else { showCAlert('✘ ' + res.message, 'danger'); }
+                    },
+                    error: function (xhr) { showCAlert('✘ ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Lỗi'), 'danger'); },
+                    complete: function () { btn.prop('disabled', false).text('Cập nhật'); }
+                });
+            });
+
+            // ---- XÓA ----
+            function deleteCategory(id) {
+                if (!confirm('Bạn có chắc muốn xóa danh mục ID=' + id + '?\nCác sản phẩm thuộc danh mục này sẽ không bị xóa.')) return;
+                $.ajax({
+                    type: 'DELETE',
+                    url: contextPath + '/api/category/deleteCategory?categoryId=' + id,
+                    dataType: 'json',
+                    success: function (res) {
+                        if (res.success) {
+                            $('#cr-' + id).fadeOut(400, function () { $(this).remove(); });
+                            showCAlert('✔ ' + res.message, 'success');
+                            setTimeout(function () { searchCategories(cState.page); }, 500);
+                        } else { showCAlert('✘ ' + res.message, 'danger'); }
+                    },
+                    error: function () { showCAlert('✘ Không thể xóa', 'danger'); }
+                });
+            }
+
+            // ---- Enter để tìm kiếm ----
+            $('#cKeyword').on('keypress', function (e) { if (e.which === 13) searchCategories(0); });
+
+            // ---- Khởi động ----
+            $(document).ready(function () { searchCategories(0); });
+            /*]]>*/
+        </script>
+
+    </section>
+</body>
+
+</html>

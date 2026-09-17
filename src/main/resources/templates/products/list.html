@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{layouts/layout}">
+
+<head>
+    <title>Danh sách sản phẩm</title>
+</head>
+
+<body>
+    <section layout:fragment="content">
+
+        <!-- TITLE + NÚT THÊM -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="mb-0">Danh sách sản phẩm</h2>
+            <a class="btn btn-primary" th:href="@{/products/create}">+ Thêm sản phẩm</a>
+        </div>
+
+        <!-- FLASH MESSAGES -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- FORM TÌM KIẾM -->
+        <form class="row g-2 mb-3" method="get" th:action="@{/products}">
+            <input type="hidden" name="page" value="0">
+            <div class="col-md-6">
+                <input type="text" class="form-control" name="keyword" th:value="${keyword}"
+                    placeholder="Nhập tên sản phẩm...">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="size">
+                    <option value="5" th:selected="${size == 5}">5 / trang</option>
+                    <option value="10" th:selected="${size == 10}">10 / trang</option>
+                    <option value="20" th:selected="${size == 20}">20 / trang</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-success w-100" type="submit">Tìm kiếm</button>
+            </div>
+            <div class="col-md-2">
+                <a class="btn btn-outline-secondary w-100" th:href="@{/products}">Xóa lọc</a>
+            </div>
+        </form>
+
+        <!-- BẢNG SẢN PHẨM -->
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width:55px">ID</th>
+                    <th style="width:100px" class="text-center">Hình ảnh</th>
+                    <th>Tên sản phẩm</th>
+                    <th style="width:130px">Danh mục</th>
+                    <th style="width:140px" class="text-end">Giá (VNĐ)</th>
+                    <th style="width:90px" class="text-center">Số lượng</th>
+                    <th>Mô tả</th>
+                    <th style="width:130px" class="text-center">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="product : ${products.content}">
+                    <td th:text="${product.id}"></td>
+
+                    <!-- HÌNH ẢNH PRIMARY -->
+                    <td class="text-center">
+                        <th:block
+                            th:with="primaryImage=${product.images != null ? product.images.?[primary == true] : null}">
+                            <img th:if="${primaryImage != null and !primaryImage.isEmpty()}"
+                                th:src="@{'/uploads/products/' + ${primaryImage[0].imageUrl}}" th:alt="${product.name}"
+                                style="width:80px; height:80px; object-fit:cover; border-radius:6px;">
+                            <span th:if="${primaryImage == null or primaryImage.isEmpty()}"
+                                class="text-muted small">Chưa có ảnh</span>
+                        </th:block>
+                    </td>
+
+                    <td th:text="${product.name}"></td>
+
+                    <!-- DANH MỤC -->
+                    <td>
+                        <span th:if="${product.categoryName != null}" class="badge bg-info text-dark"
+                            th:text="${product.categoryName}"></span>
+                        <span th:if="${product.categoryName == null}" class="text-muted small">—</span>
+                    </td>
+
+                    <td class="text-end">
+                        <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')}"></span>
+                    </td>
+                    <td class="text-center" th:text="${product.quantity}"></td>
+                    <td th:text="${product.description}"></td>
+                    <td class="text-center">
+                        <a class="btn btn-warning btn-sm" th:href="@{/products/edit/{id}(id=${product.id})}">Sửa</a>
+                        <a class="btn btn-danger btn-sm" th:href="@{/products/delete/{id}(id=${product.id})}"
+                            onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này?')">Xóa</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- THÔNG BÁO RỖNG -->
+        <div class="alert alert-warning" th:if="${products.totalElements == 0}">
+            Không tìm thấy sản phẩm nào.
+        </div>
+
+        <!-- THÔNG TIN + PHÂN TRANG -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2"
+            th:if="${products.totalElements > 0}">
+
+            <small class="text-muted">
+                Trang <strong th:text="${products.number + 1}"></strong>
+                / <strong th:text="${products.totalPages}"></strong>
+                &nbsp;|&nbsp;
+                Tổng <strong th:text="${products.totalElements}"></strong> sản phẩm
+            </small>
+
+            <nav th:if="${products.totalPages > 1}">
+                <ul class="pagination mb-0">
+                    <li class="page-item" th:classappend="${products.first} ? 'disabled'">
+                        <a class="page-link"
+                            th:href="${products.first} ? '#' : @{/products(page=0, size=${size}, keyword=${keyword})}"
+                            title="Trang đầu">&laquo;&laquo;</a>
+                    </li>
+                    <li class="page-item" th:classappend="${products.first} ? 'disabled'">
+                        <a class="page-link"
+                            th:href="${products.first} ? '#' : @{/products(page=${products.number - 1}, size=${size}, keyword=${keyword})}"
+                            title="Trang trước">&laquo;</a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(startPage, endPage)}"
+                        th:classappend="${i == products.number} ? 'active'">
+                        <a class="page-link" th:text="${i + 1}"
+                            th:href="@{/products(page=${i}, size=${size}, keyword=${keyword})}"></a>
+                    </li>
+                    <li class="page-item" th:classappend="${products.last} ? 'disabled'">
+                        <a class="page-link"
+                            th:href="${products.last} ? '#' : @{/products(page=${products.number + 1}, size=${size}, keyword=${keyword})}"
+                            title="Trang sau">&raquo;</a>
+                    </li>
+                    <li class="page-item" th:classappend="${products.last} ? 'disabled'">
+                        <a class="page-link"
+                            th:href="${products.last} ? '#' : @{/products(page=${products.totalPages - 1}, size=${size}, keyword=${keyword})}"
+                            title="Trang cuối">&raquo;&raquo;</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+
+    </section>
+</body>
+
+</html>
